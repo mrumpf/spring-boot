@@ -28,7 +28,8 @@ import java.net.URLStreamHandler;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.springframework.boot.loader.logging.DeferredLogger;
 
 /**
  * {@link URLStreamHandler} for Spring Boot loader {@link JarFile}s.
@@ -68,7 +69,7 @@ public class Handler extends URLStreamHandler {
 		rootFileCache = new SoftReference<Map<File, JarFile>>(null);
 	}
 
-	private final Logger logger = Logger.getLogger(getClass().getName());
+	private final DeferredLogger logger = DeferredLogger.getLogger(getClass().getName());
 
 	private final JarFile jarFile;
 

@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.jar.Manifest;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,6 +42,7 @@ import org.springframework.boot.loader.archive.Archive.EntryFilter;
 import org.springframework.boot.loader.archive.ExplodedArchive;
 import org.springframework.boot.loader.archive.FilteredArchive;
 import org.springframework.boot.loader.archive.JarFileArchive;
+import org.springframework.boot.loader.logging.DeferredLogger;
 import org.springframework.boot.loader.util.AsciiBytes;
 import org.springframework.boot.loader.util.SystemPropertyUtils;
 
@@ -74,7 +74,7 @@ import org.springframework.boot.loader.util.SystemPropertyUtils;
  */
 public class PropertiesLauncher extends Launcher {
 
-	private final Logger logger = Logger.getLogger(Launcher.class.getName());
+	private final DeferredLogger logger = DeferredLogger.getLogger(Launcher.class.getName());
 
 	/**
 	 * Properties key for main class. As a manifest entry can also be specified as

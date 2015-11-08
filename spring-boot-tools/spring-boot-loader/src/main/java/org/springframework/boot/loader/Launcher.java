@@ -18,18 +18,20 @@ package org.springframework.boot.loader;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.Map;
 
 import org.springframework.boot.loader.archive.Archive;
 import org.springframework.boot.loader.archive.ExplodedArchive;
 import org.springframework.boot.loader.archive.JarFileArchive;
 import org.springframework.boot.loader.jar.JarFile;
+import org.springframework.boot.loader.logging.DeferredLogger;
 
 /**
  * Base class for launchers that can start an application with a fully configured
@@ -40,7 +42,7 @@ import org.springframework.boot.loader.jar.JarFile;
  */
 public abstract class Launcher {
 
-	protected Logger logger = Logger.getLogger(Launcher.class.getName());
+	protected DeferredLogger logger = DeferredLogger.getLogger(Launcher.class.getName());
 
 	/**
 	 * The main runner class. This must be loaded by the created ClassLoader so cannot be
@@ -48,6 +50,11 @@ public abstract class Launcher {
 	 */
 	private static final String RUNNER_CLASS = Launcher.class.getPackage().getName()
 			+ ".MainMethodRunner";
+
+	/**
+	 * The name of the class to which the deferred launcher logging should be handed over.
+	 */
+	private static final String LAUNCHER_LOGGING_REPLAY_CLASS = "org.springframework.boot.logging.LauncherLoggingReplay";
 
 	/**
 	 * Launch the application. This method is the initial entry point that should be
@@ -100,10 +107,34 @@ public abstract class Launcher {
 	protected void launch(String[] args, String mainClass, ClassLoader classLoader)
 			throws Exception {
 		Runnable runner = createMainMethodRunner(mainClass, args, classLoader);
+		transferLauncherLogging(classLoader);
 		Thread runnerThread = new Thread(runner);
 		runnerThread.setContextClassLoader(classLoader);
 		runnerThread.setName(Thread.currentThread().getName());
 		runnerThread.start();
+	}
+
+	/**
+	 * This method transfers the Loggers and LogRecords, collected by the DeferredLogger
+	 * class from the launcher to the application startup phase.
+	 * <p>
+	 * It converts the data structures to using JDK classes only and passes them on to the
+	 * class LauncherLoggingReplay, which is part of the Spring Boot core module.
+	 * </p>
+	 * @param classLoader the classloader where the LauncherLoggingReplay class lives
+	 */
+	private void transferLauncherLogging(ClassLoader classLoader) {
+		try {
+			Class<?> clz = classLoader.loadClass(LAUNCHER_LOGGING_REPLAY_CLASS);
+			Method setLoggers = clz.getDeclaredMethod("setLoggers",
+					new Class<?>[] { Map.class });
+			setLoggers.invoke(null, new Object[] { DeferredLogger.getLoggers() });
+		}
+		catch (Exception e) {
+			// any exception must be ignored, because some test-cases do not have
+			// the Spring Boot jar on the classpath and in those cases a
+			// ClassNotFoundException will occur
+		}
 	}
 
 	/**
